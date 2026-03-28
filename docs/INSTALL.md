@@ -350,6 +350,75 @@ Simply **close your SSH window** (click the X). The tmux session continues runni
 
 ---
 
+## Phase 6: Auto-Restart with systemd (Optional)
+
+By default, if your VPS reboots or the tmux session crashes, the agent stays dead until you manually relaunch it. systemd fixes this — it automatically restarts the agent.
+
+### Step 23: Install the systemd service
+
+```bash
+sudo cp ~/agent-homebase/scripts/claude-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable claude-agent
+sudo systemctl start claude-agent
+```
+
+### Step 24: Verify it works
+
+```bash
+sudo systemctl status claude-agent
+```
+
+You should see `Active: active (exited)` and `Session 'claude' started.`
+
+Also verify tmux is running:
+
+```bash
+tmux ls
+```
+
+Send a Telegram message to confirm the bot responds.
+
+### What this does
+
+| Event | What happens |
+|---|---|
+| VPS reboots | systemd starts the agent automatically |
+| tmux session crashes | systemd restarts it after 30 seconds |
+| You run `sudo systemctl stop claude-agent` | Agent stops gracefully |
+| You run `sudo systemctl start claude-agent` | Agent starts in tmux |
+
+### systemd commands reference
+
+| Action | Command |
+|---|---|
+| Start agent | `sudo systemctl start claude-agent` |
+| Stop agent | `sudo systemctl stop claude-agent` |
+| Check status | `sudo systemctl status claude-agent` |
+| View logs | `journalctl -u claude-agent -f` |
+| Disable auto-start | `sudo systemctl disable claude-agent` |
+| Re-enable auto-start | `sudo systemctl enable claude-agent` |
+
+> **Note**: systemd launches the agent inside tmux. You can still `tmux attach -t claude` to see what the agent is doing, and close the SSH window to disconnect safely.
+
+### Customizing the service
+
+The service files are in `~/agent-homebase/scripts/`:
+
+- `agent-start.sh` — creates the tmux session and launches Claude Code
+- `agent-stop.sh` — gracefully stops the session
+- `claude-agent.service` — the systemd unit file
+
+If you change these files, reload systemd:
+
+```bash
+sudo cp ~/agent-homebase/scripts/claude-agent.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart claude-agent
+```
+
+---
+
 ## Restarting the Agent
 
 Whenever you change `~/CLAUDE.md` or `~/.claude/settings.json`, you need to restart Claude Code for changes to take effect:

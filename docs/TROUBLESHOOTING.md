@@ -177,6 +177,50 @@ tmux ls
 
 ---
 
+## systemd Issues
+
+### Agent doesn't start after VPS reboot
+
+**Check in order**:
+
+1. **Is the service enabled?**
+   ```bash
+   sudo systemctl is-enabled claude-agent
+   ```
+   If it says `disabled`, enable it: `sudo systemctl enable claude-agent`
+
+2. **Check the service status:**
+   ```bash
+   sudo systemctl status claude-agent
+   ```
+
+3. **Check the logs:**
+   ```bash
+   journalctl -u claude-agent --no-pager -n 20
+   ```
+
+### Service says "active" but bot doesn't respond
+
+**Cause**: systemd started the service but tmux session may not have launched properly.
+
+**Fix**:
+
+```bash
+tmux ls                              # Check if session exists
+sudo systemctl restart claude-agent  # Force restart
+tmux ls                              # Check again
+```
+
+### How to manually restart the agent via systemd
+
+```bash
+sudo systemctl restart claude-agent
+```
+
+This stops the current session and starts a new one.
+
+---
+
 ## Telegram Issues
 
 ### Bot doesn't respond to messages

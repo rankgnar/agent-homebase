@@ -345,6 +345,37 @@ fi
 export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.bun/bin:$PATH"
 
 # -----------------------------------------------------------------------------
+# Step 14: systemd service (auto-restart)
+# -----------------------------------------------------------------------------
+
+print_step "Setting up systemd auto-restart service..."
+
+echo ""
+read -p "    Enable auto-restart with systemd? (recommended) [Y/n] " -n 1 -r
+echo
+
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    # Personalize scripts
+    sed -e "s|__HOME__|$HOME|g" "$REPO_DIR/scripts/agent-start.sh" > "$REPO_DIR/scripts/agent-start.sh.tmp"
+    mv "$REPO_DIR/scripts/agent-start.sh.tmp" "$REPO_DIR/scripts/agent-start.sh"
+    chmod +x "$REPO_DIR/scripts/agent-start.sh"
+    chmod +x "$REPO_DIR/scripts/agent-stop.sh"
+
+    sed -e "s|__HOME__|$HOME|g" -e "s|__USER__|$UNIX_USER|g" \
+        "$REPO_DIR/scripts/claude-agent.service" > "$REPO_DIR/scripts/claude-agent.service.tmp"
+    mv "$REPO_DIR/scripts/claude-agent.service.tmp" "$REPO_DIR/scripts/claude-agent.service"
+
+    sudo cp "$REPO_DIR/scripts/claude-agent.service" /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable claude-agent
+
+    print_success "systemd service installed and enabled"
+    print_warning "Start it after configuring Telegram: sudo systemctl start claude-agent"
+else
+    print_warning "Skipped — you can set this up later (see docs/INSTALL.md)"
+fi
+
+# -----------------------------------------------------------------------------
 # Done!
 # -----------------------------------------------------------------------------
 
