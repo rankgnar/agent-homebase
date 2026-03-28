@@ -5,12 +5,15 @@ Step-by-step guide to set up a 24/7 AI agent on your VPS from scratch.
 **Time required**: ~30 minutes
 **Difficulty**: Beginner-friendly (if you can SSH, you can do this)
 
+> **Tip**: When copying commands from this guide, make sure to copy the entire command in one line. If a command looks broken across multiple lines in your terminal, delete it and paste it again carefully. A partial command will fail.
+
 ## Prerequisites
 
 - A VPS running Ubuntu 24.04+ (any provider — Hostinger, DigitalOcean, Hetzner, etc.)
 - SSH access to the VPS
 - A [Claude Max subscription](https://claude.ai) (for Claude Code)
-- A Telegram account (optional)
+- A Telegram account (optional, for mobile access)
+- A Gemini API key (optional, for voice note transcription — free at https://aistudio.google.com/api-keys)
 
 ---
 
@@ -193,22 +196,41 @@ Start Claude Code:
 claude
 ```
 
-Inside Claude Code:
+Inside Claude Code, run these commands one at a time:
 
 ```
 /install-plugin telegram@claude-plugins-official
+```
+
+Then exit and relaunch Claude Code for the plugin to load:
+
+```
+/exit
+```
+
+```bash
+claude
+```
+
+Now configure the bot token:
+
+```
 /telegram:configure YOUR_BOT_TOKEN
 ```
 
-Then pair your account:
+Then pair your Telegram account:
 
 ```
 /telegram:access
 ```
 
-Send the pairing code to your bot on Telegram.
+This gives you a pairing code. Go to Telegram, find your bot, and send the code as a message. This links your Telegram account as an authorized user.
+
+> **Important**: After configuring the plugin, you must exit Claude Code and relaunch it with the `--channels` flag for the bot to actually respond to Telegram messages. See Phase 4.
 
 ### Step 16: Authenticate Claude Code
+
+If you haven't already authenticated:
 
 ```bash
 claude
@@ -218,9 +240,76 @@ Follow the authentication flow. You'll need your Claude Max subscription.
 
 ---
 
-## Phase 4: Launch
+## Phase 4: Voice Notes Setup (Optional)
 
-### Step 17: Start with tmux
+This enables your agent to transcribe and respond to voice messages sent via Telegram.
+
+### Step 17: Get a Gemini API key
+
+> **Important**: You need a key from **Google AI Studio**, NOT from Google Cloud Console. They look similar but are different services.
+
+1. Go to **https://aistudio.google.com/api-keys**
+2. Click **"Create API Key"**
+3. Select or create a project
+4. Copy the key (starts with `AIza...`)
+
+**Verify the key works** before continuing:
+
+```bash
+curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY_HERE" 2>/dev/null | head -3
+```
+
+If you see `"models": [` — the key works. If you see `"error"` — the key is wrong (probably from Google Cloud Console instead of AI Studio).
+
+> **Common mistake**: Google Cloud Console (console.cloud.google.com) also lets you create API keys that start with `AIza...`, but those keys don't work with the Gemini API unless you enable the Generative Language API in your Google Cloud project. The easiest path is to use Google AI Studio directly.
+
+### Step 18: Configure the Gemini key
+
+The key must be in Claude Code's settings file so the agent can access it:
+
+```bash
+nano ~/.claude/settings.json
+```
+
+Add the `GEMINI_API_KEY` to the `env` section:
+
+```json
+{
+  "enabledPlugins": {
+    "telegram@claude-plugins-official": true
+  },
+  "env": {
+    "GEMINI_API_KEY": "YOUR_KEY_HERE"
+  }
+}
+```
+
+> **Important**: Adding the key to `~/.bashrc` is NOT enough. Claude Code reads environment variables from its own `settings.json`, not from your shell profile.
+
+### Step 19: Install the transcription script
+
+```bash
+mkdir -p ~/.claude/scripts
+cp /path/to/agent-homebase/scripts/transcribe.ts ~/.claude/scripts/transcribe.ts
+```
+
+If you used `setup.sh`, this was already done automatically.
+
+### Verify voice notes work
+
+After completing the setup, test it:
+
+```bash
+bun ~/.claude/scripts/transcribe.ts /path/to/any/audio-file.oga
+```
+
+If it prints transcribed text, everything works. If it shows "API key not valid", your Gemini key is from the wrong source (see Step 17).
+
+---
+
+## Phase 5: Launch
+
+### Step 20: Start with tmux
 
 tmux keeps your agent alive after you close SSH. This is what makes it run 24/7.
 
@@ -234,14 +323,16 @@ Inside the tmux session, start Claude Code with Telegram:
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
-### Step 18: Test it
+> **Important**: The `--channels` flag is required for the agent to respond to Telegram messages. Without it, the bot stays silent.
+
+### Step 21: Test it
 
 1. Open Telegram on your phone
 2. Find your bot
 3. Send a text message — the agent should respond
-4. Send a voice note — the agent should transcribe and respond
+4. Send a voice note — the agent should transcribe and respond (if you set up Gemini)
 
-### Step 19: Disconnect
+### Step 22: Disconnect
 
 Simply **close your SSH window** (click the X). The tmux session continues running in the background. Your agent stays alive and keeps responding to Telegram messages.
 
@@ -249,53 +340,39 @@ Simply **close your SSH window** (click the X). The tmux session continues runni
 
 ---
 
+## Restarting the Agent
+
+Whenever you change `~/CLAUDE.md` or `~/.claude/settings.json`, you need to restart Claude Code for changes to take effect:
+
+1. Reconnect to tmux: `tmux attach -t claude`
+2. Inside Claude Code, type: `/exit`
+3. Relaunch: `claude --channels plugin:telegram@claude-plugins-official`
+
+Settings changes are **not** picked up automatically — a restart is always required.
+
+---
+
 ## tmux Reference
 
 These are the commands you'll use regularly to manage your agent:
 
-### Start a new session
+| Action | Command |
+|---|---|
+| Create session | `tmux new -s claude` |
+| Reconnect | `tmux attach -t claude` |
+| Check status | `tmux ls` |
+| Kill session | `tmux kill-session -t claude` |
+| Disconnect safely | Close the SSH window |
 
-```bash
-tmux new -s claude
-```
-
-Creates a new tmux session named "claude". Use this the first time or if the session was killed.
-
-### Reconnect to your agent
-
-```bash
-tmux attach -t claude
-```
-
-> **Note**: Use `-t` (target), NOT `-s`. `-s` is for creating sessions.
-
-### Check if the session is running
-
-```bash
-tmux ls
-```
-
-If it shows `claude: ...`, your agent is alive. If it says "no server running", you need to create a new session.
+> **Common mistake**: Use `-t` to attach (target), NOT `-s` (that creates a new session).
 
 ### If the session died
 
 ```bash
-tmux ls                  # Verify it's gone
-tmux new -s claude       # Create a new one
-claude --channels plugin:telegram@claude-plugins-official   # Relaunch
+tmux ls                  # Check — if "no server running", create a new one
+tmux new -s claude
+claude --channels plugin:telegram@claude-plugins-official
 ```
-
-### Disconnect without killing the agent
-
-Just **close the SSH window**. That's it. The tmux session stays alive in the background.
-
-### Kill the session (stop the agent)
-
-```bash
-tmux kill-session -t claude
-```
-
-Only do this if you want to fully stop the agent.
 
 ---
 

@@ -222,6 +222,74 @@ tmux ls
 
 ---
 
+## Voice Notes / Audio Issues
+
+### Agent says "I can't process audio"
+
+**Cause**: The CLAUDE.md is missing the audio transcription instructions, or the agent doesn't know about the transcribe.ts script.
+
+**Fix**: Make sure `~/CLAUDE.md` contains the "Audio / Voice Notes" section with instructions to use `bun ~/.claude/scripts/transcribe.ts`. See the template CLAUDE.md in this repo.
+
+### "API key not valid" when transcribing audio
+
+**Cause**: Wrong type of API key. Google Cloud Console keys and Google AI Studio keys look the same (both start with `AIza...`) but they are NOT interchangeable.
+
+**Fix**:
+
+1. Go to **https://aistudio.google.com/api-keys** (NOT console.cloud.google.com)
+2. Create a new API key there
+3. Verify it works:
+   ```bash
+   curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY" 2>/dev/null | head -3
+   ```
+   You should see `"models": [` — if you see `"error"`, the key is wrong.
+
+4. Update `~/.claude/settings.json`:
+   ```json
+   {
+     "env": {
+       "GEMINI_API_KEY": "YOUR_WORKING_KEY"
+     }
+   }
+   ```
+
+5. **Restart Claude Code** — settings.json changes are NOT picked up automatically.
+
+### "GEMINI_API_KEY not set" error
+
+**Cause**: The key is in `~/.bashrc` but not in Claude Code's settings.
+
+**Fix**: Claude Code reads environment variables from `~/.claude/settings.json`, NOT from your shell profile. Add the key to the `env` section of settings.json (see above).
+
+### transcribe.ts not found
+
+**Cause**: The transcription script wasn't installed.
+
+**Fix**:
+
+```bash
+mkdir -p ~/.claude/scripts
+cp ~/agent-homebase/scripts/transcribe.ts ~/.claude/scripts/transcribe.ts
+```
+
+---
+
+## Settings Changes Not Taking Effect
+
+### Changed settings.json but nothing happened
+
+**Cause**: Claude Code only reads settings.json on startup.
+
+**Fix**: Restart Claude Code:
+
+1. Reconnect to tmux: `tmux attach -t claude`
+2. Inside Claude Code: `/exit`
+3. Relaunch: `claude --channels plugin:telegram@claude-plugins-official`
+
+This applies to ALL changes: env variables, permissions, plugin settings.
+
+---
+
 ## Memory Issues
 
 ### Agent doesn't read the vault on startup
