@@ -116,7 +116,7 @@ sudo swapon /swapfile
 
 ### `tmux attach -s claude` doesn't work
 
-**Cause**: Wrong flag. `-s` is for creating sessions, `-t` is for targeting existing ones.
+**Cause**: Wrong flag. `-s` is for **creating** sessions, `-t` is for **targeting** existing ones.
 
 **Fix**:
 
@@ -124,9 +124,21 @@ sudo swapon /swapfile
 tmux attach -t claude    # Correct: -t flag
 ```
 
+### `can't find session: claude`
+
+**Cause**: No tmux session named "claude" exists. Either it was never created or it was killed.
+
+**Fix**:
+
+```bash
+tmux ls                      # Check if any sessions exist
+tmux new -s claude           # Create a new one
+claude --channels plugin:telegram@claude-plugins-official   # Relaunch the agent
+```
+
 ### Session died after SSH disconnect
 
-**Cause**: tmux session crashed or was killed by the OS.
+**Cause**: tmux session crashed or was killed by the OS (e.g., OOM killer).
 
 **Fix**:
 
@@ -136,11 +148,32 @@ tmux new -s claude           # Create a new one
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
+> **Tip**: Make sure swap is configured (`free -h`). Without swap, the OS may kill processes when RAM is full.
+
 ### Agent stops responding to Telegram after `Ctrl+B D`
 
 **Cause**: In some configurations, detaching with `Ctrl+B D` can freeze the Claude Code process.
 
-**Workaround**: Instead of detaching with keyboard shortcuts, just **close the SSH window directly**. The tmux session continues running.
+**Workaround**: Do NOT use `Ctrl+B D`. Instead, just **close the SSH window directly** (click the X). The tmux session continues running in the background.
+
+### How to check if the agent is running
+
+```bash
+tmux ls
+```
+
+- If you see `claude: ...` → agent is alive
+- If you see `no server running` → create a new session with `tmux new -s claude`
+
+### Quick reference: tmux commands
+
+| Action | Command |
+|---|---|
+| Create session | `tmux new -s claude` |
+| Reconnect | `tmux attach -t claude` |
+| Check status | `tmux ls` |
+| Kill session | `tmux kill-session -t claude` |
+| Disconnect safely | Close the SSH window |
 
 ---
 

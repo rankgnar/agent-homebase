@@ -222,8 +222,15 @@ Follow the authentication flow. You'll need your Claude Max subscription.
 
 ### Step 17: Start with tmux
 
+tmux keeps your agent alive after you close SSH. This is what makes it run 24/7.
+
 ```bash
 tmux new -s claude
+```
+
+Inside the tmux session, start Claude Code with Telegram:
+
+```bash
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
@@ -231,19 +238,64 @@ claude --channels plugin:telegram@claude-plugins-official
 
 1. Open Telegram on your phone
 2. Find your bot
-3. Send a message — the agent should respond
-4. (Optional) Send a voice note — the agent should transcribe and respond
+3. Send a text message — the agent should respond
+4. Send a voice note — the agent should transcribe and respond
 
 ### Step 19: Disconnect
 
-Simply **close your SSH window**. The tmux session continues running.
+Simply **close your SSH window** (click the X). The tmux session continues running in the background. Your agent stays alive and keeps responding to Telegram messages.
 
-To reconnect later:
+> **Important**: Do NOT use `Ctrl+B D` to detach — in some cases this can cause Claude Code to stop responding to Telegram. Just close the SSH window directly.
+
+---
+
+## tmux Reference
+
+These are the commands you'll use regularly to manage your agent:
+
+### Start a new session
 
 ```bash
-ssh your-vps
+tmux new -s claude
+```
+
+Creates a new tmux session named "claude". Use this the first time or if the session was killed.
+
+### Reconnect to your agent
+
+```bash
 tmux attach -t claude
 ```
+
+> **Note**: Use `-t` (target), NOT `-s`. `-s` is for creating sessions.
+
+### Check if the session is running
+
+```bash
+tmux ls
+```
+
+If it shows `claude: ...`, your agent is alive. If it says "no server running", you need to create a new session.
+
+### If the session died
+
+```bash
+tmux ls                  # Verify it's gone
+tmux new -s claude       # Create a new one
+claude --channels plugin:telegram@claude-plugins-official   # Relaunch
+```
+
+### Disconnect without killing the agent
+
+Just **close the SSH window**. That's it. The tmux session stays alive in the background.
+
+### Kill the session (stop the agent)
+
+```bash
+tmux kill-session -t claude
+```
+
+Only do this if you want to fully stop the agent.
 
 ---
 
