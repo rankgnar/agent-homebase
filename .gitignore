@@ -1,0 +1,7 @@
+vault-template/vault/*.md
+!vault-template/vault/index.md
+.env
+*.key
+*.pem
+node_modules/
+.DS_Store

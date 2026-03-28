@@ -1,0 +1,252 @@
+# Troubleshooting
+
+Real errors encountered during setup and their exact solutions.
+
+---
+
+## Installation Issues
+
+### `command not found: claude`
+
+**Cause**: npm global bin directory is not in your PATH.
+
+**Fix**:
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+npm install -g @anthropic-ai/claude-code
+```
+
+### `command not found: bun`
+
+**Cause**: Bun installed but PATH not updated.
+
+**Fix**:
+
+```bash
+echo 'export BUN_INSTALL="$HOME/.bun"' >> ~/.bashrc
+echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### `error: unzip is required to install bun`
+
+**Cause**: unzip not installed (not included by default on some Ubuntu setups).
+
+**Fix**:
+
+```bash
+sudo apt install -y unzip
+curl -fsSL https://bun.sh/install | bash
+```
+
+### `EACCES: permission denied` when installing npm packages globally
+
+**Cause**: npm trying to write to a root-owned directory.
+
+**Fix**:
+
+```bash
+mkdir -p ~/.npm-global
+npm config set prefix '~/.npm-global'
+echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### PATH not available inside Claude Code
+
+**Cause**: Claude Code's shell environment doesn't inherit your `.bashrc` PATH changes.
+
+**Fix**: Add PATH to Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "env": {
+    "PATH": "/home/YOUR_USER/.bun/bin:/home/YOUR_USER/.npm-global/bin:${PATH}",
+    "BUN_INSTALL": "/home/YOUR_USER/.bun"
+  }
+}
+```
+
+---
+
+## Security Issues
+
+### Tailscale not connecting
+
+**Symptoms**: `tailscale status` shows "Stopped" or connection timeout.
+
+**Fix**:
+
+```bash
+sudo tailscale up
+tailscale status    # Should show "Running"
+```
+
+If the node was removed from your Tailscale network, re-authenticate:
+
+```bash
+sudo tailscale up --reset
+```
+
+### Swap not active after reboot
+
+**Symptoms**: `free -h` shows 0B swap after restarting.
+
+**Fix**: Verify `/etc/fstab` has the swap entry:
+
+```bash
+cat /etc/fstab | grep swap
+# Should show: /swapfile none swap sw 0 0
+```
+
+If missing, add it:
+
+```bash
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+sudo swapon /swapfile
+```
+
+---
+
+## tmux Issues
+
+### `tmux attach -s claude` doesn't work
+
+**Cause**: Wrong flag. `-s` is for creating sessions, `-t` is for targeting existing ones.
+
+**Fix**:
+
+```bash
+tmux attach -t claude    # Correct: -t flag
+```
+
+### Session died after SSH disconnect
+
+**Cause**: tmux session crashed or was killed by the OS.
+
+**Fix**:
+
+```bash
+tmux ls                      # Check if any sessions exist
+tmux new -s claude           # Create a new one
+claude --channels plugin:telegram@claude-plugins-official
+```
+
+### Agent stops responding to Telegram after `Ctrl+B D`
+
+**Cause**: In some configurations, detaching with `Ctrl+B D` can freeze the Claude Code process.
+
+**Workaround**: Instead of detaching with keyboard shortcuts, just **close the SSH window directly**. The tmux session continues running.
+
+---
+
+## Telegram Issues
+
+### Bot doesn't respond to messages
+
+**Check in order**:
+
+1. **Is Claude Code running?**
+   ```bash
+   tmux ls
+   tmux attach -t claude
+   ```
+
+2. **Was it started with the Telegram channel?**
+   ```bash
+   claude --channels plugin:telegram@claude-plugins-official
+   ```
+
+3. **Is the plugin enabled?** Check `~/.claude/settings.json`:
+   ```json
+   {
+     "enabledPlugins": {
+       "telegram@claude-plugins-official": true
+     }
+   }
+   ```
+
+4. **Is your account paired?** Run inside Claude Code:
+   ```
+   /telegram:access
+   ```
+
+### "Forbidden" error when bot tries to respond
+
+**Cause**: You haven't started a conversation with the bot, or the bot was blocked.
+
+**Fix**: Open Telegram, find your bot, and press "Start" or unblock it.
+
+### Pairing code not working
+
+**Cause**: The pairing code expires quickly.
+
+**Fix**: Generate a new one with `/telegram:access` and use it immediately.
+
+---
+
+## Memory Issues
+
+### Agent doesn't read the vault on startup
+
+**Cause**: `CLAUDE.md` not in the right location or missing vault instructions.
+
+**Fix**: Make sure `~/CLAUDE.md` exists and contains the boot sequence instructions. Claude Code reads `CLAUDE.md` from the working directory on startup.
+
+### Agent writes notes without frontmatter
+
+**Cause**: Instructions in CLAUDE.md not specific enough.
+
+**Fix**: The CLAUDE.md template includes explicit formatting rules. Make sure the `Note Format` section is present.
+
+### Native memory vs vault confusion
+
+**Cause**: Not clear what should go where.
+
+**Fix**: See the [Memory System guide](MEMORY.md). Rule of thumb:
+- **How we work** → native memory (auto-loaded)
+- **What we're working on** → vault (on-demand)
+
+---
+
+## Context Issues
+
+### Agent loses context mid-conversation
+
+**Cause**: Claude Code's context window fills up on long sessions.
+
+**What happens**: Earlier messages get compressed or dropped.
+
+**Mitigation**: The CLAUDE.md includes auto-save rules that persist state to the vault on task completion and farewell detection. On context reset, the agent reads `boot/state.md` and picks up where it left off.
+
+### Agent doesn't remember previous sessions
+
+**Cause**: State not saved before the session ended.
+
+**Fix**: Check `logs/` for the last session log — it should have enough context to resume. The agent is instructed to save on farewell keywords ("bye", "see you", etc.).
+
+### Shell snapshot errors
+
+**Symptoms**: Errors like `syntax error near unexpected token 'fi'` on every bash command.
+
+**Fix**: Find and fix the corrupted snapshot:
+
+```bash
+ls ~/.claude/shell-snapshots/
+# Edit the broken file — usually an empty if/fi block
+# Add 'true' inside the empty block
+```
+
+---
+
+## General Tips
+
+- **Always use tmux** — never run Claude Code directly in SSH
+- **Check `boot/state.md`** — if the agent seems confused, read this file to see what it thinks is happening
+- **One session at a time** — don't run multiple Claude Code instances with the same Telegram channel
+- **Restart cleanly** — say "save state and close" before killing the session
+- **The vault is the source of truth** — if something is wrong, check `logs/` for history

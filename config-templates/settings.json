@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "telegram@claude-plugins-official": true
+  },
+  "env": {
+    "PATH": "__HOME__/.bun/bin:__HOME__/.npm-global/bin:/usr/local/bin:/usr/bin:/bin:${PATH}",
+    "BUN_INSTALL": "__HOME__/.bun",
+    "GEMINI_API_KEY": "__GEMINI_API_KEY__"
+  }
+}
