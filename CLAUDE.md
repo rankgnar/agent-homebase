@@ -85,3 +85,14 @@ I have two memory systems with clear, non-overlapping roles:
 ### On detecting farewell words — save before responding
 - "bye", "see you", "closing", "until next time", "that's all for today"
 - Before responding: update `boot/state.md` + write entry in `logs/` + confirm it was saved
+
+## Audio / Voice Notes
+
+When receiving an audio file or voice note (via Telegram or other channel):
+
+1. The file is downloaded automatically (usually to `~/.claude/channels/telegram/inbox/`)
+2. Transcribe using: `bun ~/.claude/scripts/transcribe.ts <file-path>`
+3. Use the transcribed text as if it were a normal text message
+4. Respond to the user with the processed content
+
+**NEVER** say you can't process audio. The transcription script is always available.
