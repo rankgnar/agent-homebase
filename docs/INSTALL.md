@@ -319,11 +319,21 @@ tmux new -s claude
 
 Inside the tmux session, start Claude Code with Telegram:
 
+**With permission prompts (safe, asks before each action):**
+
 ```bash
 claude --channels plugin:telegram@claude-plugins-official
 ```
 
-> **Important**: The `--channels` flag is required for the agent to respond to Telegram messages. Without it, the bot stays silent.
+**Without permission prompts (autonomous, for 24/7 Telegram use):**
+
+```bash
+claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official
+```
+
+> **Note**: `--dangerously-skip-permissions` gives the agent full autonomy. This is safe if your VPS is properly secured (Tailscale, no root, dedicated user). The CLAUDE.md rules already instruct the agent to avoid destructive operations.
+>
+> The `--channels` flag is required for the agent to respond to Telegram messages. Without it, the bot stays silent.
 
 ### Step 21: Test it
 

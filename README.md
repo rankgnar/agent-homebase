@@ -166,7 +166,19 @@ Most of this is handled by `setup.sh` during installation.
 
 By default, Claude Code **asks for permission** before running any command. This is the safest approach — you approve each action.
 
-If you want the agent to run autonomously (e.g., responding via Telegram while you're away), you can configure automatic permissions in `~/.claude/settings.json`:
+For a 24/7 Telegram agent where you're not always watching the terminal, you have two options:
+
+### Option A: Skip all permission prompts
+
+```bash
+claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official
+```
+
+This gives the agent full autonomy — it can run any command without asking. Best for trusted environments where the VPS is locked down (Tailscale, no root, dedicated user).
+
+### Option B: Selective deny list
+
+If you want autonomy but with guardrails, add a deny list to `~/.claude/settings.json`:
 
 ```json
 {
@@ -180,11 +192,15 @@ If you want the agent to run autonomously (e.g., responding via Telegram while y
 }
 ```
 
-This allows everything **except** the explicitly denied destructive commands. Start permissive and add deny rules as needed.
+Then launch with:
 
-For a more restrictive approach (whitelist specific commands), see the [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code).
+```bash
+claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official
+```
 
-> **Recommendation**: Start with the default (ask every time). Only add permissions after you understand what commands your agent needs regularly.
+The agent runs freely but is blocked from the explicitly denied commands.
+
+> **Recommendation**: If your VPS is properly secured (Tailscale, no root, dedicated user), `--dangerously-skip-permissions` is safe and practical for Telegram use. The CLAUDE.md rules already tell the agent not to do destructive operations without confirmation.
 
 ## Troubleshooting
 
