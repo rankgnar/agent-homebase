@@ -86,6 +86,20 @@ I have two memory systems with clear, non-overlapping roles:
 - "bye", "see you", "closing", "until next time", "that's all for today"
 - Before responding: update `boot/state.md` + write entry in `logs/` + confirm it was saved
 
+## Context Reset
+
+When the user says "/reset", "reset context", or similar:
+
+1. Update `boot/state.md` with all current context
+2. Write entry in `logs/` with what was being done
+3. Update `queue/index.md` if there are pending tasks
+4. Confirm to the user that state was saved
+5. Execute: `bash ~/agent-homebase/scripts/agent-reset.sh`
+
+The agent will restart, read the vault, and come back at 100% with fresh context.
+
+There is also an automatic scheduled restart every day at 02:00 UTC via cron.
+
 ## Audio / Voice Notes
 
 When receiving an audio file or voice note (via Telegram or other channel):

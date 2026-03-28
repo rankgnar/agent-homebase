@@ -407,6 +407,7 @@ The service files are in `~/agent-homebase/scripts/`:
 
 - `agent-start.sh` — creates the tmux session and launches Claude Code
 - `agent-stop.sh` — gracefully stops the session
+- `agent-reset.sh` — saves state and restarts (used by /reset command and cron)
 - `claude-agent.service` — the systemd unit file
 
 If you change these files, reload systemd:
@@ -416,6 +417,51 @@ sudo cp ~/agent-homebase/scripts/claude-agent.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl restart claude-agent
 ```
+
+---
+
+## Phase 7: Context Management (Recommended)
+
+Over time, the agent's context window fills up and quality degrades. These two features prevent that:
+
+### Scheduled daily restart (cron)
+
+Automatically restarts the agent every day at 02:00 UTC with a fresh context:
+
+```bash
+(crontab -l 2>/dev/null; echo '0 2 * * * /usr/bin/sudo /usr/bin/systemctl restart claude-agent') | crontab -
+```
+
+Verify:
+
+```bash
+crontab -l
+```
+
+### On-demand reset via Telegram
+
+Allow the agent to restart itself when you say "/reset" in Telegram. This requires passwordless sudo for the restart command only:
+
+```bash
+echo 'YOUR_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart claude-agent' | sudo tee /etc/sudoers.d/claude-agent
+```
+
+Replace `YOUR_USER` with your username.
+
+After this, the agent can run `agent-reset.sh` which:
+1. Saves current state to the vault
+2. Logs the reset
+3. Restarts the systemd service
+
+The CLAUDE.md template already includes instructions for the agent to handle "/reset" commands.
+
+### Why this works
+
+- The agent **never** uses `--continue` — each restart is a fresh context
+- The vault (`boot/state.md`) preserves all important state
+- Native memory preserves your profile and preferences
+- Fresh context = 100% quality, no hallucinations
+- Daily restart = preventive maintenance, no manual intervention needed
 
 ---
 
