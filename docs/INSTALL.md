@@ -350,118 +350,17 @@ Simply **close your SSH window** (click the X). The tmux session continues runni
 
 ---
 
-## Phase 6: Auto-Restart with systemd (Optional)
+## Context Management
 
-By default, if your VPS reboots or the tmux session crashes, the agent stays dead until you manually relaunch it. systemd fixes this — it automatically restarts the agent.
+Over time, the agent's context window fills up and quality can degrade. To keep it fresh:
 
-### Step 23: Install the systemd service
+1. Reconnect to tmux: `tmux attach -t claude`
+2. Inside Claude Code, type: `/exit`
+3. Relaunch: `claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official`
 
-```bash
-sudo cp ~/agent-homebase/scripts/claude-agent.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable claude-agent
-sudo systemctl start claude-agent
-```
+The agent reads `boot/state.md` on startup and picks up where it left off with a clean context.
 
-### Step 24: Verify it works
-
-```bash
-sudo systemctl status claude-agent
-```
-
-You should see `Active: active (exited)` and `Session 'claude' started.`
-
-Also verify tmux is running:
-
-```bash
-tmux ls
-```
-
-Send a Telegram message to confirm the bot responds.
-
-### What this does
-
-| Event | What happens |
-|---|---|
-| VPS reboots | systemd starts the agent automatically |
-| tmux session crashes | systemd restarts it after 30 seconds |
-| You run `sudo systemctl stop claude-agent` | Agent stops gracefully |
-| You run `sudo systemctl start claude-agent` | Agent starts in tmux |
-
-### systemd commands reference
-
-| Action | Command |
-|---|---|
-| Start agent | `sudo systemctl start claude-agent` |
-| Stop agent | `sudo systemctl stop claude-agent` |
-| Check status | `sudo systemctl status claude-agent` |
-| View logs | `journalctl -u claude-agent -f` |
-| Disable auto-start | `sudo systemctl disable claude-agent` |
-| Re-enable auto-start | `sudo systemctl enable claude-agent` |
-
-> **Note**: systemd launches the agent inside tmux. You can still `tmux attach -t claude` to see what the agent is doing, and close the SSH window to disconnect safely.
-
-### Customizing the service
-
-The service files are in `~/agent-homebase/scripts/`:
-
-- `agent-start.sh` — creates the tmux session and launches Claude Code
-- `agent-stop.sh` — gracefully stops the session
-- `agent-reset.sh` — saves state and restarts (used by /reset command and cron)
-- `claude-agent.service` — the systemd unit file
-
-If you change these files, reload systemd:
-
-```bash
-sudo cp ~/agent-homebase/scripts/claude-agent.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl restart claude-agent
-```
-
----
-
-## Phase 7: Context Management (Recommended)
-
-Over time, the agent's context window fills up and quality degrades. These two features prevent that:
-
-### Scheduled daily restart (cron)
-
-Automatically restarts the agent every day at 02:00 UTC with a fresh context:
-
-```bash
-(crontab -l 2>/dev/null; echo '0 2 * * * /usr/bin/sudo /usr/bin/systemctl restart claude-agent') | crontab -
-```
-
-Verify:
-
-```bash
-crontab -l
-```
-
-### On-demand reset via Telegram
-
-Allow the agent to restart itself when you say "/reset" in Telegram. This requires passwordless sudo for the restart command only:
-
-```bash
-echo 'YOUR_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart claude-agent' | sudo tee /etc/sudoers.d/claude-agent
-```
-
-Replace `YOUR_USER` with your username.
-
-After this, the agent can run `agent-reset.sh` which:
-1. Saves current state to the vault
-2. Logs the reset
-3. Restarts the systemd service
-
-The CLAUDE.md template already includes instructions for the agent to handle "/reset" commands.
-
-### Why this works
-
-- The agent **never** uses `--continue` — each restart is a fresh context
-- The vault (`boot/state.md`) preserves all important state
-- Native memory preserves your profile and preferences
-- Fresh context = 100% quality, no hallucinations
-- Daily restart = preventive maintenance, no manual intervention needed
+> **Tip**: You don't lose anything by restarting. The vault has all the state. Fresh context = better quality responses.
 
 ---
 

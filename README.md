@@ -57,7 +57,6 @@ The agent runs 24/7 inside tmux, is reachable via Telegram from your phone, and 
 | **Custom identity** | Your agent, your rules, your language via CLAUDE.md |
 | **Audio transcription** | Send voice notes via Telegram, agent transcribes and responds |
 | **Hardened permissions** | Secure allow/deny rules for bash commands and tools |
-| **Auto-restart** | systemd service restarts the agent if it crashes or the VPS reboots |
 | **Interactive setup** | No broken placeholders — setup.sh asks for your details |
 
 ## Prerequisites
@@ -125,10 +124,7 @@ agent-homebase/
 │   └── mcp.json              # MCP servers (Context7)
 └── scripts/
     ├── setup.sh              # Interactive installation script
-    ├── transcribe.ts         # Audio transcription via Gemini API
-    ├── agent-start.sh        # Auto-start script (used by systemd)
-    ├── agent-stop.sh         # Graceful stop script (used by systemd)
-    └── claude-agent.service  # systemd unit file for auto-restart
+    └── transcribe.ts         # Audio transcription via Gemini API
 ```
 
 ## Security Recommendations
