@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="agent-homebase banner" width="100%">
+</p>
+
 # agent-homebase
 
 **Turn a blank VPS into a 24/7 AI agent with persistent memory and Telegram access.**
